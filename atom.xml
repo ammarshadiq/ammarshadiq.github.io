@@ -1,16 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Ammar Shadiq's Blog]]></title>
-  <link href="http://ammarshadiq.github.io/atom.xml" rel="self"/>
-  <link href="http://ammarshadiq.github.io/"/>
-  <updated>2017-02-12T20:40:22+01:00</updated>
-  <id>http://ammarshadiq.github.io/</id>
-  <author>
-    <name><![CDATA[Ammar Shadiq]]></name>
-    
-  </author>
-  <generator uri="http://octopress.org/">Octopress</generator>
+    <title><![CDATA[Ammar Shadiq]]></title>
+    <link href="http://ammarshadiq.github.io/atom.xml" rel="self"/>
+    <link href="http://ammarshadiq.github.io/"/>
+    <updated>2017-02-12T20:57:17+01:00</updated>
+    <id>http://ammarshadiq.github.io/</id>
+    <author>
+        <name><![CDATA[Ammar Shadiq]]></name>
+        
+    </author>
+    <generator uri="http://octopress.org/">Octopress</generator>
 
-  
+    
+    <entry>
+        <title type="html"><![CDATA[This is a first post]]></title>
+        <link href="http://ammarshadiq.github.io/blog/2017/02/12/this-is-a-first-post/"/>
+        <updated>2017-02-12T20:41:45+01:00</updated>
+        <id>http://ammarshadiq.github.io/blog/2017/02/12/this-is-a-first-post</id>
+        <content type="html"><![CDATA[
+]]></content>
+    </entry>
+    
 </feed>

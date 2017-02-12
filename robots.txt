@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: 
+Disallow:
 
-Sitemap: http://ammarshadiq.github.io/sitemap.xml 
+Sitemap: http://ammarshadiq.github.io/sitemap.xml
