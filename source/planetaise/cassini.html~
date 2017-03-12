@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>Cassini</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background:#000;
+				color:#fff;
+				padding:0;
+				margin:0;
+				overflow:hidden;
+				font-family:georgia;
+				text-align:center;
+			}
+			
+			#info {
+				position: absolute;
+				top: 0px;
+				width: 100%;
+				padding: 5px;
+				z-index: 100;
+			}
+			
+			h1 { }
+			a { color:skyblue }
+			canvas { pointer-events:none; z-index:10; position:relative; }
+
+			#d { text-align:center; margin:1em 0 -2.5em 0; z-index:0; position:relative; display:block }
+			#buttons { margin:0.5em 0 0 0 }
+			button { font-family:georgia; border:0; background:#222; color:#fff; padding:0.2em 0.5em; cursor:pointer; border-radius:3px }
+			button:hover { background:#333 }
+		</style>
+	</head>
+
+	<body>
+		<div id="d">
+			<div id="info" style="text-align:left;z-index:101;background: rgba(255,255,255,0.1);"> <a href="/planetaise" target="_self">Ke Tata Surya</a> </div>
+			<div id="info">model cassini oleh <a href="http://www.celestiamotherlode.net/catalog/show_addon_details.php?addon_id=319" target="_blank">Jack Higgins - Celstia</a>, di modifikasi oleh <a href="http://ammarshadiq.web.id" target="_blank">Ammar Shadiq</a></div>
+
+			<div id="buttons"></div>
+		</div>
+
+		<script src="build/Three.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight;
+
+			var container;
+
+			var camera, scene, renderer, meshCassini;
+
+			var lightMesh;
+
+			var directionalLight, pointLight;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 70, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+				camera.position.z = 1000;
+
+				scene = new THREE.Scene();
+
+				// LIGHTS
+
+				var ambient = new THREE.AmbientLight( 0xffffff );
+				scene.add( ambient );
+
+				directionalLight = new THREE.DirectionalLight( 0xffffff );
+				directionalLight.position.set( 1, 1, 0.5 ).normalize();
+				scene.add( directionalLight );
+				
+				var planetTexture 	= THREE.ImageUtils.loadTexture( "textures/planets/saturn_atmos_2048.jpg" );
+				var radius = 6371;
+				
+				pointLight = new THREE.PointLight( 0xffffff );
+				pointLight.position.set( 0, 0, 0 );
+				scene.add( pointLight );
+				
+				// planet
+				sphereGeometry = new THREE.SphereGeometry( radius, 100, 50 );
+				sphereGeometry.computeTangents();
+				
+				var materialPlanet = new THREE.MeshPhongMaterial( { color: 0xffffff, map: planetTexture } );
+				meshPlanet = new THREE.Mesh( sphereGeometry, materialPlanet );
+				meshPlanet.position = pointLight.position;
+				meshPlanet.scale.set( 0.05, 0.05, 0.05 );
+				scene.add( meshPlanet );
+				
+				// ring				
+				ringMaterial = new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/planets/saturn-ring.png' ), overdraw: true, transparent : true } ) ;
+				ringSize = 4.7 * radius;
+				ringMesh = new THREE.Mesh( new THREE.PlaneGeometry( ringSize, ringSize, 1, 1 ), ringMaterial );
+				ringMesh.rotation.x = 90 * (Math.PI / 180);
+				ringMesh.doubleSided = true;
+				ringMesh.scale.set( 0.05, 0.05, 0.05 );
+				scene.add( ringMesh );
+				
+				// STARS
+				var i,
+				vector,
+				starsGeometry = new THREE.Geometry();
+
+				for ( i = 0; i < 1500; i ++ ) {
+
+					vector = new THREE.Vector3( Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1 );
+					vector.multiplyScalar( radius );
+
+					starsGeometry.vertices.push( new THREE.Vertex( vector ) );
+
+				}
+
+				var stars,
+				starsMaterials = [
+					new THREE.ParticleBasicMaterial( { color: 0x555555, size: 2, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x555555, size: 1, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x333333, size: 2, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x3a3a3a, size: 1, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x1a1a1a, size: 2, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x1a1a1a, size: 1, sizeAttenuation: false } )
+				];
+				
+				for ( i = 10; i < 30; i ++ ) {
+
+					stars = new THREE.ParticleSystem( starsGeometry, starsMaterials[ i % 6 ] );
+
+					stars.rotation.x = Math.random() * 6;
+					stars.rotation.y = Math.random() * 6;
+					stars.rotation.z = Math.random() * 6;
+
+					var s = i * 0.1;
+					stars.scale.set( s, s, s );
+
+					stars.matrixAutoUpdate = false;
+					stars.updateMatrix();
+
+					scene.add( stars );
+
+				}
+				
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				renderer.setFaceCulling( 0 );
+
+				container.appendChild( renderer.domElement );
+
+				document.addEventListener('mousemove', onDocumentMouseMove, false);				
+				
+				var loader = new THREE.BinaryLoader(),
+					callbackCassini = function( geometry ) { createScene( geometry ) };
+				loader.load( "obj/cassini/cassini.js", callbackCassini);
+			}
+
+			function $( id ) { return document.getElementById( id ) }
+
+			function createScene( geometry ) {
+
+				var s = 75, m = new THREE.MeshFaceMaterial();
+				
+				meshCassini = new THREE.Mesh( geometry, m );
+				meshCassini.scale.set( s, s, s );
+				scene.add( meshCassini );
+
+			}
+
+			function onDocumentMouseMove(event) {
+
+				mouseX = ( event.clientX - windowHalfX );
+				mouseY = ( event.clientY - windowHalfY );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+
+			}
+			
+
+			function render() {
+
+				var timer = -0.0002 * Date.now();
+
+				meshCassini.rotation.y += 0.01;
+				meshCassini.rotation.z += 0.01;
+
+				camera.position.x += ( mouseX - camera.position.x ) * .05;
+				camera.position.y += ( - mouseY - camera.position.y ) * .05;
+
+				camera.lookAt( scene.position );
+
+				meshPlanet.position.x = 1500 * Math.cos( timer );
+				meshPlanet.position.z = 1500 * Math.sin( timer );
+				ringMesh.position.x = 1500 * Math.cos( timer );
+				ringMesh.position.z = 1500 * Math.sin( timer );
+
+
+
+				renderer.render( scene, camera );
+			}
+
+		</script>
+
+	</body>
+</html>

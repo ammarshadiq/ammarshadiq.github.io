@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>planetaise - saturn</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background: #000;
+				color: #EEE;
+				padding: 0;
+				margin: 0;
+				font-weight: bold;
+				overflow: hidden;
+
+				font-family: Monospace;
+				font-size: 13px;
+				text-align: center;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px;
+				width: 100%;
+				padding: 5px;
+				z-index: 100;
+			}
+
+			a { color: green; }
+			b { color: green; }
+		</style>
+
+		<script src="build/Three.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
+
+	</head>
+
+	<body>
+
+		<div id="d">
+			<div id="info" style="text-align:left;z-index:101;background: rgba(255,255,255,0.1);"> <a href="/planetaise" target="_self">Ke Tata Surya</a> </div>
+			<div id="info">
+				<b>Navigasi</b> mouse &amp; tekan <b>tombol kiri:</b> putar, <b>tombol tengah:</b> zoom, <b>tombol kanan/D:</b> geser
+			</div>
+			<div id="buttons"></div>
+		</div>
+
+		<script>
+
+			var radius = 6371, // still using earth mean radius, scaling it to size the satelites, orbital period, orbital radius etc.
+			tilt = 26.73 * (Math.PI / 180),
+			rotationSpeed = 0.1,
+			prevAngle = 180 * (Math.PI / 180),
+
+			/* real scale 
+			titanScale = 0.04494,
+			rheaScale = 0.01341,
+			dionaScale = 0.00979,
+			tethysScale = 0.00926,
+			enceladusScale = 0.00439, */
+			
+			/* not real scale */
+			iapetusScale = 1,
+			titanScale = 0.4494/2,
+			rheaScale = 0.1341/2,
+			dioneScale = 0.0979/2,
+			tethysScale = 0.0926/2,
+			enceladusScale = 0.0439/2,
+
+			height = window.innerHeight,
+			width  = window.innerWidth,
+
+			container, 
+
+			camera, controls, scene, renderer,
+			sphereGeometry, meshPlanet, meshClouds, 
+			meshTitan, meshRhea, meshDione, meshTethys, meshEnceladus, meshCassini,
+			dirLight, ambientLight,
+
+			clock = new THREE.Clock();
+
+			window.onload = function() {
+
+				if ( !Detector.webgl ) {
+
+					Detector.addGetWebGLMessage();
+					return;
+
+				}
+
+				init();
+				animate();
+
+			}
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				scene = new THREE.Scene();
+
+				renderer = new THREE.WebGLRenderer( { clearAlpha: 1, clearColor: 0x000000 } );
+				renderer.setSize( width, height );
+				renderer.sortObjects = false;
+				renderer.autoClear = false;
+
+				container.appendChild( renderer.domElement );
+
+				camera = new THREE.PerspectiveCamera( 25, width / height, 50, 1e7 );
+				camera.position.z = radius * 70;
+
+				controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.2;
+
+				controls.noZoom = false;
+				controls.noPan = false;
+
+				controls.staticMoving = false;
+				controls.dynamicDampingFactor = 0.3;
+
+				controls.minDistance = radius * 1.1;
+				//controls.maxDistance = radius * 150;
+				controls.maxDistance = radius * 250;
+
+				controls.keys = [ 65, 83, 68 ]; // [ rotateKey, zoomKey, panKey ]
+
+				dirLight = new THREE.DirectionalLight( 0xFFFFFF );
+				dirLight.position.set( -1, 0, 1 ).normalize();
+				scene.add( dirLight );
+								
+				var planetTexture 	= THREE.ImageUtils.loadTexture( "textures/planets/saturn_atmos_2048.jpg" ),
+				normalTexture     	= THREE.ImageUtils.loadTexture( "textures/planets/flat_normal_2048.png" ),
+				specularTexture   	= THREE.ImageUtils.loadTexture( "textures/planets/all_land_specular_2048.jpg" ),
+				titanTexture       	= THREE.ImageUtils.loadTexture( "textures/planets/saturn-titan-clouds_256.jpg" ),
+				rheaTexture       	= THREE.ImageUtils.loadTexture( "textures/planets/saturn-rhea_256.jpg" ),
+				dioneTexture       	= THREE.ImageUtils.loadTexture( "textures/planets/saturn-dione_256.jpg" ),
+				tethysTexture      	= THREE.ImageUtils.loadTexture( "textures/planets/saturn-tethys_256.jpg" ),
+				enceladusTexture   	= THREE.ImageUtils.loadTexture( "textures/planets/saturn-enceladus_256.jpg" );
+
+				var shader = THREE.ShaderUtils.lib[ "normal" ],
+				uniforms = THREE.UniformsUtils.clone( shader.uniforms );
+
+				uniforms[ "tNormal" ].texture = normalTexture;
+				uniforms[ "uNormalScale" ].value = 0.85;
+
+				uniforms[ "tDiffuse" ].texture = planetTexture;
+				uniforms[ "tSpecular" ].texture = specularTexture;
+
+				uniforms[ "enableAO" ].value = false;
+				uniforms[ "enableDiffuse" ].value = true;
+				uniforms[ "enableSpecular" ].value = true;
+
+				uniforms[ "uDiffuseColor" ].value.setHex( 0xffffff );
+				uniforms[ "uSpecularColor" ].value.setHex( 0x333333 );
+				uniforms[ "uAmbientColor" ].value.setHex( 0x000000 );
+
+				uniforms[ "uShininess" ].value = 15;
+
+				var materialNormalMap = new THREE.ShaderMaterial({
+					fragmentShader: shader.fragmentShader,
+					vertexShader: shader.vertexShader,
+					uniforms: uniforms,
+					lights: true
+				});
+
+				// globeWhole				
+				globeWhole = new THREE.Object3D;
+				globe = new THREE.Object3D;
+				globeWhole.rotation.z = .465;
+				globeWhole.rotation.x = .3;
+								
+				// planet
+				sphereGeometry = new THREE.SphereGeometry( radius, 100, 50 );
+				sphereGeometry.computeTangents();
+				meshPlanet = new THREE.Mesh( sphereGeometry, materialNormalMap );
+
+				// ring				
+				ringMaterial = new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/planets/saturn-ring.png' ), overdraw: true, transparent : true } ) ;
+				ringSize = 4.7 * radius;
+				ringMesh = new THREE.Mesh( new THREE.PlaneGeometry( ringSize, ringSize, 1, 1 ), ringMaterial );
+				ringMesh.rotation.x = 90 * (Math.PI / 180);
+				ringMesh.doubleSided = true;
+				
+				// Planet rotation axis line				
+				planetRotationLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				planetRotationLineMaterial.color.setRGB( .8, .2, .2 ); // red
+				
+				planetRotationAxis = new THREE.Object3D;
+				
+				planetRotationAxisXGeometry = new THREE.Geometry();
+				planetRotationAxisXVectorA = new THREE.Vector3( -9000, 0, 0 );
+				planetRotationAxisXVectorB = new THREE.Vector3( 9000, 0, 0 );
+				planetRotationAxisXGeometry.vertices.push( new THREE.Vertex( planetRotationAxisXVectorA ) );
+				planetRotationAxisXGeometry.vertices.push( new THREE.Vertex( planetRotationAxisXVectorB ) );
+				planetRotationAxisX = new THREE.Line( planetRotationAxisXGeometry, planetRotationLineMaterial, THREE.LineStrip );
+				planetRotationAxis.add(planetRotationAxisX);
+				
+				planetRotationAxisYGeometry = new THREE.Geometry();
+				planetRotationAxisYVectorA = new THREE.Vector3( 0, -9000, 0 );
+				planetRotationAxisYVectorB = new THREE.Vector3( 0, 9000, 0 );
+				planetRotationAxisYGeometry.vertices.push( new THREE.Vertex( planetRotationAxisYVectorA ) );
+				planetRotationAxisYGeometry.vertices.push( new THREE.Vertex( planetRotationAxisYVectorB ) );
+				planetRotationAxisY = new THREE.Line( planetRotationAxisYGeometry, planetRotationLineMaterial, THREE.LineStrip );
+				planetRotationAxis.add(planetRotationAxisY);
+											
+				planetRotationAxisZGeometry = new THREE.Geometry();
+				planetRotationAxisZVectorA = new THREE.Vector3( 0, 0, -9000 );
+				planetRotationAxisZVectorB = new THREE.Vector3( 0, 0, 9000 );
+				planetRotationAxisZGeometry.vertices.push( new THREE.Vertex( planetRotationAxisZVectorA ) );
+				planetRotationAxisZGeometry.vertices.push( new THREE.Vertex( planetRotationAxisZVectorB ) );
+				planetRotationAxisZ = new THREE.Line( planetRotationAxisZGeometry, planetRotationLineMaterial, THREE.LineStrip );
+				planetRotationAxis.add(planetRotationAxisZ);
+						
+				// Orbital Perpendicular Line				
+				orbitalPerpendicularLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				orbitalPerpendicularLineMaterial.color.setHSV( .65, .0, 1.0 ); // yellow
+				
+				orbitalPerpendicularLineGeometry = new THREE.Geometry();
+				orbitalPerpendicularLineVectorA = new THREE.Vector3( 0, -9000, 0 );
+				orbitalPerpendicularLineVectorB = new THREE.Vector3( 0, 9000, 0 );
+				orbitalPerpendicularLineGeometry.vertices.push( new THREE.Vertex( orbitalPerpendicularLineVectorA ) );
+				orbitalPerpendicularLineGeometry.vertices.push( new THREE.Vertex( orbitalPerpendicularLineVectorB ) );
+				orbitalPerpendicularLine = new THREE.Line( orbitalPerpendicularLineGeometry, orbitalPerpendicularLineMaterial, THREE.LineStrip );
+				
+				// RESOLUTION AND SIZE OF ORBITAL LINE
+				// bigger resolution means more line segment created for the orbital line.
+				var resolution = 90;				
+				var size = 360 / resolution;
+				
+				//TITAN
+				//titan orbital radius = 15.6160257 saturn radii
+				var titanOrbitalRadius = radius * 15.6;
+				var materialTitan = new THREE.MeshPhongMaterial( { color: 0xffffff, map: titanTexture } );
+				meshTitan = new THREE.Mesh( sphereGeometry, materialTitan );
+				meshTitan.position.set( titanOrbitalRadius, 0, 0 );
+				meshTitan.scale.set( titanScale, titanScale, titanScale );
+				
+				// Titan Orbital Line
+				material = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				material.color.setRGB( .192, .192, .192 ); // gray
+				titanOrbitalLineGeometry = new THREE.Geometry();
+				for ( var i = 0; i <= resolution; i ++ ) {
+					segment = ( i * size ) * Math.PI / 180;					
+					titanOrbitalLineGeometry.vertices.push( 
+						new THREE.Vertex( 
+							new THREE.Vector3( 
+								Math.cos( segment ) * titanOrbitalRadius, 
+								0, 
+								Math.sin( segment ) * titanOrbitalRadius 
+							) 
+						) 
+					);
+				}
+				titanOrbitalLine = new THREE.Line( titanOrbitalLineGeometry, material );
+				
+				//RHEA
+				//rhea orbital radius = 6.736667628 saturn radii
+				var rheaOrbitalRadius = radius * 6.73;
+				var materialRhea = new THREE.MeshPhongMaterial( { color: 0xffffff, map: rheaTexture } );
+				meshRhea = new THREE.Mesh( sphereGeometry, materialRhea );
+				meshRhea.position.set( rheaOrbitalRadius, 0, 0 );
+				meshRhea.scale.set( rheaScale, rheaScale, rheaScale );
+				
+				// Rhea Orbital Line
+				rheaOrbitalLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				rheaOrbitalLineMaterial.color.setRGB( .192, .192, .192 ); // gray
+				rheaOrbitalLineGeometry = new THREE.Geometry();
+				for ( var i = 0; i <= resolution; i ++ ) {
+					segment = ( i * size ) * Math.PI / 180;					
+					rheaOrbitalLineGeometry.vertices.push( 
+						new THREE.Vertex( 
+							new THREE.Vector3( 
+								Math.cos( segment ) * rheaOrbitalRadius, 
+								0, 
+								Math.sin( segment ) * rheaOrbitalRadius 
+							) 
+						) 
+					);
+				}
+				rheaOrbitalLine = new THREE.Line( rheaOrbitalLineGeometry, rheaOrbitalLineMaterial );
+				
+				//DIONE
+				//dione orbital radius = 4.823283604 saturn radii
+				var dioneOrbitalRadius = radius * 4.82;
+				var materialDione = new THREE.MeshPhongMaterial( { color: 0xffffff, map: dioneTexture } );
+				meshDione = new THREE.Mesh( sphereGeometry, materialDione );
+				meshDione.position.set( dioneOrbitalRadius, 0, 0 );
+				meshDione.scale.set( dioneScale, dioneScale, dioneScale );
+				
+				// Dione Orbital Line
+				dioneOrbitalLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				dioneOrbitalLineMaterial.color.setRGB( .192, .192, .192 ); // gray
+				dioneOrbitalLineGeometry = new THREE.Geometry();
+				for ( var i = 0; i <= resolution; i ++ ) {
+					segment = ( i * size ) * Math.PI / 180;					
+					dioneOrbitalLineGeometry.vertices.push( 
+						new THREE.Vertex( 
+							new THREE.Vector3( 
+								Math.cos( segment ) * dioneOrbitalRadius, 
+								0, 
+								Math.sin( segment ) * dioneOrbitalRadius 
+							) 
+						) 
+					);
+				}
+				dioneOrbitalLine = new THREE.Line( dioneOrbitalLineGeometry, dioneOrbitalLineMaterial );
+				
+				//TETHYS
+				//Tethys orbital radius = 3.765357915 saturn radii
+				var tethysOrbitalRadius = radius * 3.76;
+				var materialTethys = new THREE.MeshPhongMaterial( { color: 0xffffff, map: tethysTexture } );
+				meshTethys = new THREE.Mesh( sphereGeometry, materialTethys );
+				meshTethys.position.set( tethysOrbitalRadius, 0, 0 );
+				meshTethys.scale.set( tethysScale, tethysScale, tethysScale );
+				
+				// Tethys Orbital Line
+				tethysOrbitalLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				tethysOrbitalLineMaterial.color.setRGB( .192, .192, .192 ); // gray
+				tethysOrbitalLineGeometry = new THREE.Geometry();
+				for ( var i = 0; i <= resolution; i ++ ) {
+					segment = ( i * size ) * Math.PI / 180;					
+					tethysOrbitalLineGeometry.vertices.push( 
+						new THREE.Vertex( 
+							new THREE.Vector3( 
+								Math.cos( segment ) * tethysOrbitalRadius, 
+								0, 
+								Math.sin( segment ) * tethysOrbitalRadius 
+							) 
+						) 
+					);
+				}
+				tethysOrbitalLine = new THREE.Line( tethysOrbitalLineGeometry, tethysOrbitalLineMaterial );
+				
+				//ENCELADUS
+				//Enceladus orbital radius = 3.041078088 saturn radii
+				var enceladusOrbitalRadius = radius * 3.04;
+				var materialEnceladus = new THREE.MeshPhongMaterial( { color: 0xffffff, map: enceladusTexture } );
+				meshEnceladus = new THREE.Mesh( sphereGeometry, materialEnceladus );
+				meshEnceladus.position.set( enceladusOrbitalRadius, 0, 0 );
+				meshEnceladus.scale.set( enceladusScale, enceladusScale, enceladusScale );
+				
+				//Enceladus Orbital Line
+				enceladusOrbitalLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				enceladusOrbitalLineMaterial.color.setRGB( .192, .192, .192 ); // gray
+				enceladusOrbitalLineGeometry = new THREE.Geometry();
+				for ( var i = 0; i <= resolution; i ++ ) {
+					segment = ( i * size ) * Math.PI / 180;					
+					enceladusOrbitalLineGeometry.vertices.push( 
+						new THREE.Vertex( 
+							new THREE.Vector3( 
+								Math.cos( segment ) * enceladusOrbitalRadius, 
+								0, 
+								Math.sin( segment ) * enceladusOrbitalRadius 
+							) 
+						) 
+					);
+				}
+				enceladusOrbitalLine = new THREE.Line( enceladusOrbitalLineGeometry, enceladusOrbitalLineMaterial );
+				
+				// CASSINI
+				// Cassini plane
+				cassiniPlane = new THREE.Object3D;
+				cassiniPlane.rotation.z = -.465;
+				
+				var loader = new THREE.BinaryLoader(),
+					callbackCassini = function( geometry ) { createScene( geometry, cassiniPlane ) };
+				
+				// Cassini Orbital Line
+				cassiniOrbitalLineMaterial = new THREE.LineBasicMaterial( { opacity: .8, linewidth: 1, blending: THREE.AdditiveBlending } );
+				cassiniOrbitalLineMaterial.color.setRGB( .8, .2, .2 ); // red				
+
+				var cassiniPeriapsis = radius * 5.437; // saturn radii unit
+				var semiMajorAxis = radius * 36.8615; // saturn radii unit
+				var semiMinorAxis = radius * 19.2679; // saturn radii unit
+				var cassiniOrbitEccentricity = 0.85251;
+				
+				
+				cassiniOrbitalLineGeometry = new THREE.Geometry();
+				for ( var i = 0; i <= resolution; i ++ ) {
+					segment = ( i * size ) * Math.PI / 180;					
+					cassiniOrbitalLineGeometry.vertices.push( 
+						new THREE.Vertex( 
+							new THREE.Vector3( 
+								0, //x
+								- Math.sin( segment ) * semiMinorAxis, //y
+								(semiMajorAxis - cassiniPeriapsis) + Math.cos( segment ) * semiMajorAxis //z						
+							) 
+						) 
+					);
+				}
+
+				cassiniOrbitalLine = new THREE.Line( cassiniOrbitalLineGeometry, cassiniOrbitalLineMaterial );
+				
+				// STARS
+				var i,
+				vector,
+				starsGeometry = new THREE.Geometry();
+
+				for ( i = 0; i < 1500; i ++ ) {
+
+					vector = new THREE.Vector3( Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1 );
+					vector.multiplyScalar( radius );
+
+					starsGeometry.vertices.push( new THREE.Vertex( vector ) );
+
+				}
+
+				var stars,
+				starsMaterials = [
+					new THREE.ParticleBasicMaterial( { color: 0x555555, size: 2, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x555555, size: 1, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x333333, size: 2, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x3a3a3a, size: 1, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x1a1a1a, size: 2, sizeAttenuation: false } ),
+					new THREE.ParticleBasicMaterial( { color: 0x1a1a1a, size: 1, sizeAttenuation: false } )
+				];
+				
+				for ( i = 10; i < 30; i ++ ) {
+
+					stars = new THREE.ParticleSystem( starsGeometry, starsMaterials[ i % 6 ] );
+
+					stars.rotation.x = Math.random() * 6;
+					stars.rotation.y = Math.random() * 6;
+					stars.rotation.z = Math.random() * 6;
+
+					var s = i * 10;
+					stars.scale.set( s, s, s );
+
+					stars.matrixAutoUpdate = false;
+					stars.updateMatrix();
+
+					scene.add( stars );
+
+				}
+				
+				globeWhole.add( meshPlanet );
+				globeWhole.add( ringMesh );
+				globeWhole.add( planetRotationAxis );
+				
+				loader.load( "obj/cassini/cassini.js", callbackCassini);
+				cassiniPlane.add( cassiniOrbitalLine );
+				
+				globeWhole.add( meshTitan );
+				globeWhole.add( titanOrbitalLine );
+				
+				globeWhole.add( meshRhea );
+				globeWhole.add( rheaOrbitalLine );
+				
+				globeWhole.add( meshDione );
+				globeWhole.add( dioneOrbitalLine );
+				
+				globeWhole.add( meshTethys );
+				globeWhole.add( tethysOrbitalLine );
+				
+				globeWhole.add( meshEnceladus );
+				globeWhole.add( enceladusOrbitalLine );
+								
+				scene.add( globeWhole );
+				globe.add( orbitalPerpendicularLine );
+				scene.add ( globe );
+				scene.add ( cassiniPlane );
+				
+				//stats = new Stats();
+				//stats.domElement.style.position = 'absolute';
+				//stats.domElement.style.top = '0px';
+				//stats.domElement.style.zIndex = 100;
+				//container.appendChild( stats.domElement );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			};
+
+			function onWindowResize( event ) {
+
+				width = window.innerWidth;
+				height = window.innerHeight;
+
+				renderer.setSize( width, height );
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+
+				controls.screen.width = width;
+				controls.screen.height = height;
+
+				camera.radius = ( width + height ) / 4;
+
+			};
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+				//stats.update();
+
+			};
+
+			function render() {
+
+				var delta = clock.getDelta(); // the time unit (minimal time unit for this renderer)
+
+				meshPlanet.rotation.y += rotationSpeed * delta;
+				planetRotationAxis.rotation.y += rotationSpeed * delta;
+				ringMesh.rotation.z -= rotationSpeed * delta;
+
+				// titan orbital period = 15.945 days = 36.29687788 saturn rotation period
+				var titanAngle = (delta * rotationSpeed)/36.3;
+				meshTitan.position = new THREE.Vector3(
+					Math.cos( titanAngle ) * meshTitan.position.x - Math.sin( titanAngle ) * meshTitan.position.z,
+					0,
+					Math.sin( titanAngle ) * meshTitan.position.x + Math.cos( titanAngle ) * meshTitan.position.z
+				);
+				meshTitan.rotation.y -= titanAngle;
+				
+				
+				// Rhea orbital period = 4.518212 days = 10.28516709 saturn rotation period
+				var rheaAngle = (delta * rotationSpeed)/10.3;
+				meshRhea.position = new THREE.Vector3(
+					Math.cos( rheaAngle ) * meshRhea.position.x - Math.sin( rheaAngle ) * meshRhea.position.z,
+					0,
+					Math.sin( rheaAngle ) * meshRhea.position.x + Math.cos( rheaAngle ) * meshRhea.position.z
+				);
+				meshRhea.rotation.y -= rheaAngle;
+				
+				// Dione orbital period = 2.736915 days = 6.230258359 saturn rotation period
+				var dioneAngle = (delta * rotationSpeed)/6.23;
+				meshDione.position = new THREE.Vector3(
+					Math.cos( dioneAngle ) * meshDione.position.x - Math.sin( dioneAngle ) * meshDione.position.z,
+					0,
+					Math.sin( dioneAngle ) * meshDione.position.x + Math.cos( dioneAngle ) * meshDione.position.z
+				);
+				meshDione.rotation.y -= dioneAngle;
+
+				// Tethys orbital period = 1.887802 days = 4.297354573 saturn rotation period
+				var tethysAngle = (delta * rotationSpeed)/4.3;
+				meshTethys.position = new THREE.Vector3(
+					Math.cos( tethysAngle ) * meshTethys.position.x - Math.sin( tethysAngle ) * meshTethys.position.z,
+					0,
+					Math.sin( tethysAngle ) * meshTethys.position.x + Math.cos( tethysAngle ) * meshTethys.position.z
+				);
+				meshTethys.rotation.y -= tethysAngle;
+				
+				// Enceladus orbital period = 1.370218 days = 3.119136746 saturn rotation period
+				var enceladusAngle = (delta * rotationSpeed)/3.1;
+				meshEnceladus.position = new THREE.Vector3(
+					Math.cos( enceladusAngle ) * meshEnceladus.position.x - Math.sin( enceladusAngle ) * meshEnceladus.position.z,
+					0,
+					Math.sin( enceladusAngle ) * meshEnceladus.position.x + Math.cos( enceladusAngle ) * meshEnceladus.position.z
+				);
+				meshEnceladus.rotation.y -= enceladusAngle;
+				
+				
+				///*
+				var cassiniPeriapsis = radius * 5.437; // saturn radii unit
+				var semiMajorAxis = radius * 36.8615; // saturn radii unit
+				var semiMinorAxis = radius * 19.2679; // saturn radii unit
+				var g = semiMajorAxis-cassiniPeriapsis;
+				
+				// Cassini orbital period = 39.2 days = 89.234093 saturn rotation period
+				var cassiniAngle = (delta * rotationSpeed)/90;
+				
+				var vectorY = (Math.cos( cassiniAngle ) * (meshCassini.position.y / semiMinorAxis) - 
+							Math.sin( cassiniAngle ) * ((meshCassini.position.z-g) / semiMajorAxis)) * semiMinorAxis;
+				var vectorZ = g+(Math.sin( cassiniAngle ) * (meshCassini.position.y / semiMinorAxis) + 
+							Math.cos( cassiniAngle ) * ((meshCassini.position.z-g) / semiMajorAxis)) * semiMajorAxis;
+				
+				meshCassini.position = new THREE.Vector3(
+					0, vectorY, vectorZ 
+				);
+				
+				meshCassini.rotation.z -= .004;
+				
+				controls.update();
+
+				renderer.clear();
+				renderer.render( scene, camera );
+
+			};
+			
+			function createScene( geometry, cassiniPlane ) {
+
+				var s = 75, m = new THREE.MeshFaceMaterial();
+
+				meshCassini = new THREE.Mesh( geometry, m );
+				meshCassini.scale.set( s, s, s );
+				meshCassini.position.set( 0, 0, (radius * 36.8615 * 2 )-(radius * 5.437) );	
+				meshCassini.rotation.y = 2.3;
+				meshCassini.rotation.x = .5;
+
+				cassiniPlane.add( meshCassini );
+			}
+		</script>
+	</body>
+</html>
