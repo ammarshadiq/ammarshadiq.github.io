@@ -41,17 +41,32 @@
 
 	<body>
 		<div id="d">
-			<div id="info" style="text-align:left;z-index:101;background: rgba(255,255,255,0.1);"> <a href="/blaugh/planetaise/" target="_self">Ke Tata Surya</a> </div>
+			<div id="info" style="text-align:left;z-index:101;background: rgba(255,255,255,0.1);"> <a href="/planetaise/" target="_self">Ke Tata Surya</a> </div>
 			<div id="info">
 				<b>Navigasi</b> mouse &amp; tekan <b>tombol kiri:</b> putar, <b>tombol tengah:</b> zoom, <b>tombol kanan/D:</b> geser
 			</div>
-			<div id="buttons"></div>
 		</div>
 
 		<script>
 
+			// Converts from degrees to radians.
+			Math.radians = function(degrees) {
+			  return degrees * Math.PI / 180;
+			};
+			 
+			// Converts from radians to degrees.
+			Math.degrees = function(radians) {
+			  return radians * 180 / Math.PI;
+			};
+
+			var now = new Date();
+			var start = new Date(now.getFullYear(), 0, 0);
+			var diff = now - start;
+			var dayOfYear = Math.floor((now-start) / (1000*60*60*24));
+	
+			var tilt = Math.radians(23.45 * Math.sin(Math.radians((360/365)*(284+dayOfYear))));
+
 			var radius = 6371,
-			tilt = 23.5 * (Math.PI / 180),
 			rotationSpeed = 0.1,
 
 			cloudsScale = 1.005,
@@ -159,8 +174,8 @@
 				globe = new THREE.Object3D;
 
 				//globeWhole.position.x = 360;
-				globeWhole.rotation.z = .465;
-				globeWhole.rotation.x = .3;
+				//globeWhole.rotation.z = .465;
+				globeWhole.rotation.x = tilt;
 				
 				
 				// planet
@@ -191,7 +206,7 @@
 				
 				lineRadius = radius + 500;
 				
-				for (var longitude = 2*Math.PI; longitude >= Math.PI/30; longitude-=Math.PI/30) {
+				for (var longitude = 2 * Math.PI; longitude >= Math.PI/30; longitude-=Math.PI/30) {
 
 					tickGeometry = new THREE.Geometry();
 					latitude = Math.PI /2;			
@@ -260,6 +275,7 @@
 				orbitalPerpendicularLineGeometry.vertices.push( new THREE.Vertex( orbitalPerpendicularLineVectorB ) );
 				orbitalPerpendicularLine = new THREE.Line( orbitalPerpendicularLineGeometry, orbitalPerpendicularLineMaterial, THREE.LineStrip );
 				*/
+
 				// sun light line
 
 				var resolution = 90;				
