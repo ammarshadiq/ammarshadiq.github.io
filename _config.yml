@@ -27,8 +27,8 @@ email:
 # ----------------------- #
 
 # If publishing to a subdirectory as in http://site.com/project set 'root: /project'
-root: /ammarshadiq.github.io
-#root: /
+#root: /ammarshadiq.github.io
+root: /
 permalink: /blog/:year/:month/:day/:title/
 source: source
 destination: public
