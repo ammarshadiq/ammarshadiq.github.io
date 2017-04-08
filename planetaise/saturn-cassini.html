@@ -11,7 +11,7 @@
 		<meta property="og:url" content="https://ammarshadiq.github.io/planetaise/saturn-cassini.html" />
 		<meta property="og:image" content="https://ammarshadiq.github.io/planetaise/img/saturn-cassini_screenshot.png" />
 		<meta property="og:site_name" content="ammarshadiq.github.io.com" />
-		<meta property="og:description" content="A WebGL experiment showing Saturn, it's satelite and 'Cassini-Huygens spacecraft with it's elliptical orbit. Cassini–Huygens is an unmanned spacecraft sent to the planet Saturn. It's launced on October 15, 1997, 08:43:00 UTC." />
+		<meta property="og:description" content="A WebGL experiment showing Saturn, it's major satelites and 'Cassini' spacecraft with it's elliptical orbit. Cassini–Huygens is an unmanned spacecraft sent to the planet Saturn. It's launced on October 15, 1997, 08:43:00 UTC and will end it's mission on 15 September 2017 by plunging it self onto Saturn's athmospehere" />
 		<style>
 			body {
 				background: #000;
@@ -50,7 +50,7 @@
 		<div id="d">
 			<div id="info" style="text-align:left;z-index:101;background: rgba(255,255,255,0.1);"> <a href="/planetaise/" target="_self">Ke Tata Surya</a> </div>
 			<div id="info">
-				<b>Navigasi</b> mouse &amp; tekan <b>tombol kiri:</b> putar, <b>tombol tengah:</b> zoom, <b>tombol kanan/D:</b> geser
+				<b>Navigasi</b> mouse &amp; tekan <b>tombol kiri:</b> putar, <b>tombol tengah:</b> geser, <b>tombol kanan/D:</b> zoom
 			</div>
 			<div id="buttons"></div>
 		</div>
@@ -136,7 +136,7 @@
 				//controls.maxDistance = radius * 150;
 				controls.maxDistance = radius * 250;
 
-				controls.keys = [ 65, 83, 68 ]; // [ rotateKey, zoomKey, panKey ]
+				controls.keys = [ 65, 68, 83 ]; // [ rotateKey, panKey, zoomKey ]
 
 				dirLight = new THREE.DirectionalLight( 0xFFFFFF );
 				dirLight.position.set( -1, 0, 1 ).normalize();
