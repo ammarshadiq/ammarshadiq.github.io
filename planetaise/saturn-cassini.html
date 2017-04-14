@@ -62,20 +62,19 @@
 			rotationSpeed = 0.1,
 			prevAngle = 180 * (Math.PI / 180),
 
-			/* real scale 
+			/* real scale  */
 			titanScale = 0.04494,
 			rheaScale = 0.01341,
-			dionaScale = 0.00979,
+			dioneScale = 0.00979,
 			tethysScale = 0.00926,
-			enceladusScale = 0.00439, */
+			enceladusScale = 0.00439,
 			
-			/* not real scale */
-			iapetusScale = 1,
-			titanScale = 0.4494/2,
-			rheaScale = 0.1341/2,
-			dioneScale = 0.0979/2,
-			tethysScale = 0.0926/2,
-			enceladusScale = 0.0439/2,
+			/* exaggeratedscale */
+			//titanScale = 0.4494/2,
+			//rheaScale = 0.1341/2,
+			//dioneScale = 0.0979/2,
+			//tethysScale = 0.0926/2,
+			//enceladusScale = 0.0439/2,
 
 			height = window.innerHeight,
 			width  = window.innerWidth,
@@ -572,7 +571,9 @@
 				var g = semiMajorAxis-cassiniPeriapsis;
 				
 				// Cassini orbital period = 39.2 days = 89.234093 saturn rotation period
-				var cassiniAngle = (delta * rotationSpeed)/90;
+				var distanceToSaturn = Math.sqrt(Math.pow(meshCassini.position.y,2)+Math.pow(meshCassini.position.z-g,2));
+				var ellipseOrbitalSpeed = Math.sqrt(((2/distanceToSaturn)-(1/semiMajorAxis))) * 250; // vis-viva equation * exaggeration
+				var cassiniAngle = (delta * rotationSpeed * ellipseOrbitalSpeed)/90;
 				
 				var vectorY = (Math.cos( cassiniAngle ) * (meshCassini.position.y / semiMinorAxis) - 
 							Math.sin( cassiniAngle ) * ((meshCassini.position.z-g) / semiMajorAxis)) * semiMinorAxis;
